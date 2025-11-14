@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Experimental Shader – Vicus</title>
+  <style>
+    html, body {
+      margin: 0; padding: 0;
+      width: 100%; height: 100%;
+      background: #000; overflow: hidden;
+    }
+  </style>
+</head>
+
+<body>
+<script type="module">
+import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.166.0/build/three.module.js";
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+
+// geometry
+const geo = new THREE.PlaneGeometry(2, 2);
+
+// Experimental preset configuration - feel free to modify!
+const preset = {
+  normalMap: "normal.png",
+  displacementMap: "displacement.png",
+  zoomLevel: 1.5,
+  dispStrength: 0.4,
+  matcap: "matcap2.jpeg"
+};
+
+// textures
+const TL = new THREE.TextureLoader();
+const matcap = TL.load(preset.matcap);
+const normalMap = TL.load(preset.normalMap);
+const dispMap = TL.load(preset.displacementMap);
+
+normalMap.wrapS = normalMap.wrapT = THREE.ClampToEdgeWrapping;
+dispMap.wrapS = dispMap.wrapT = THREE.ClampToEdgeWrapping;
+
+// --------------------------
+// EXPERIMENTAL MATERIAL
+// --------------------------
+const material = new THREE.ShaderMaterial({
+  uniforms: {
+    uMatcap: { value: matcap },
+    uNormalMap: { value: normalMap },
+    uDisplacementMap: { value: dispMap },
+    uTime: { value: 0 },
+    uRotation: { value: 0 },
+    uDispStrength: { value: preset.dispStrength },
+    uZoomLevel: { value: preset.zoomLevel },
+    uResolution: { value: new THREE.Vector2(1, 1) }
+  },
+  vertexShader: `
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: `
+    precision mediump float;
+
+    uniform sampler2D uMatcap;
+    uniform sampler2D uNormalMap;
+    uniform sampler2D uDisplacementMap;
+
+    uniform vec2 uResolution;
+    uniform float uRotation;
+    uniform float uTime;
+    uniform float uDispStrength;
+    uniform float uZoomLevel;
+
+    varying vec2 vUv;
+
+    void main() {
+
+      // keep shader space square
+      float aspect = uResolution.x / uResolution.y;
+      vec2 texUv = vUv;
+
+      if (aspect > 1.0) {
+        // wide screen
+        texUv.x = (texUv.x - 0.5) * aspect + 0.5;
+      } else {
+        // tall screen
+        texUv.y = (texUv.y - 0.5) / aspect + 0.5;
+      }
+
+      texUv = (texUv - 0.5) * uZoomLevel + 0.5;
+
+      // EXPERIMENTAL: Add some time-based UV distortion
+      // texUv += sin(texUv * 10.0 + uTime * 0.5) * 0.02;
+
+      // normal
+      vec3 tangentNormal = texture2D(uNormalMap, texUv).xyz * 2.0 - 1.0;
+
+      // EXPERIMENTAL: More dynamic noise
+      float n1 = sin(texUv.x * 4.0 + uTime * 0.3);
+      float n2 = cos(texUv.y * 3.0 + uTime * 0.25);
+      float n3 = sin((texUv.x + texUv.y) * 2.0 + uTime * 0.1);
+      tangentNormal = normalize(tangentNormal + vec3(n1, n2, n3) * 80.0);
+
+      vec3 viewNormal = normalize(vec3(tangentNormal.xy, tangentNormal.z));
+
+      vec2 mc = viewNormal.xy;
+      float s = sin(uRotation);
+      float c = cos(uRotation);
+      mc = mat2(c, -s, s, c) * mc;
+
+      float disp = texture2D(uDisplacementMap, texUv).r;
+      mc += vec2(cos(disp * 6.28318), sin(disp * 6.28318)) * uDispStrength;
+
+      mc = mc * 0.5 + 0.5;
+      vec3 matcapColor = texture2D(uMatcap, mc).rgb;
+      
+      // EXPERIMENTAL: Color manipulation
+      matcapColor = matcapColor * 2.0; // Extra bright
+      matcapColor = mix(matcapColor, vec3(0.2, 0.4, 0.8), sin(uTime * 0.1) * 0.1 + 0.1); // Slight blue tint
+      
+      gl_FragColor = vec4(matcapColor, 1.0) * disp;
+    }
+  `
+});
+
+// --------------------------
+// THEN CREATE MESH
+// --------------------------
+const quad = new THREE.Mesh(geo, material);
+scene.add(quad);
+
+// --------------------------
+// THEN RESIZE()
+// --------------------------
+function resize() {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  material.uniforms.uResolution.value.set(window.innerWidth, window.innerHeight);
+}
+resize();
+window.addEventListener("resize", resize);
+
+// --------------------------
+// RENDER LOOP
+// --------------------------
+renderer.setAnimationLoop((t) => {
+  material.uniforms.uTime.value = t * 0.001;
+  material.uniforms.uRotation.value = t * 0.0008; // Slightly faster rotation
+  renderer.render(scene, camera);
+});
+</script>
+</body>
+</html>

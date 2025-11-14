@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <title>Experimental Shader – Vicus</title>
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: #000;
+      overflow: hidden;
+    }
+  </style>
+</head>
+
+<body>
+  <script type="module">
+    import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.166.0/build/three.module.js";
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(innerWidth, innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+
+    const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+
+    // Mouse interaction
+    let mouse = new THREE.Vector2();
+    let mouseTarget = new THREE.Vector2();
+    
+    window.addEventListener('mousemove', (event) => {
+      mouseTarget.x = (event.clientX / window.innerWidth) * 2 - 1;
+      mouseTarget.y = -(event.clientY / window.innerHeight) * 2 + 1;
+    });
+
+    // Load normal texture (embossed logo)
+    const textureLoader = new THREE.TextureLoader();
+    const normalTexture = textureLoader.load('./normal.png');
+    normalTexture.wrapS = THREE.ClampToEdgeWrapping;
+    normalTexture.wrapT = THREE.ClampToEdgeWrapping;
+
+    // Create fullscreen quad
+    const geometry = new THREE.PlaneGeometry(2, 2);
+
+    // Screen-space chromatic dispersion shader
+    const material = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: 0 },
+        uMouse: { value: new THREE.Vector2() },
+        uNormalMap: { value: normalTexture },
+        uResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
+        uChromaticAberration: { value: 0.005 }
+      },
+      vertexShader: `
+        varying vec2 vUv;
+        
+        void main() {
+          vUv = uv;
+          gl_Position = vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform float uTime;
+        uniform vec2 uMouse;
+        uniform sampler2D uNormalMap;
+        uniform vec2 uResolution;
+        uniform float uChromaticAberration;
+        
+        varying vec2 vUv;
+        
+        // Create a colorful background pattern
+        vec3 getBackground(vec2 uv) {
+          vec2 p = uv * 4.0 + uTime * 0.1;
+          
+          // Animated gradient background
+          float r = sin(p.x * 1.5 + uTime * 0.8) * 0.5 + 0.5;
+          float g = sin(p.y * 1.8 + uTime * 1.2 + 2.0) * 0.5 + 0.5;
+          float b = sin((p.x + p.y) * 1.2 + uTime * 0.9 + 4.0) * 0.5 + 0.5;
+          
+          // Add some radial gradient
+          vec2 center = vec2(0.5) + uMouse * 0.1;
+          float dist = distance(uv, center);
+          float radial = 1.0 - smoothstep(0.0, 0.8, dist);
+          
+          // Noise texture
+          float noise = fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+          
+          return vec3(r, g, b) * (0.7 + radial * 0.3 + noise * 0.1);
+        }
+        
+        void main() {
+          vec2 uv = vUv;
+          
+          // Sample normal map
+          vec3 normal = texture2D(uNormalMap, uv).rgb;
+          float mask = length(normal);
+          
+          // Simple glass cutoff
+          if (mask < 0.5) {
+            gl_FragColor = vec4(getBackground(uv), 1.0);
+            return;
+          }
+          
+          // Simple chromatic aberration - offset each channel slightly
+          vec2 offset = (normal.rg - 0.5) * uChromaticAberration;
+          
+          float r = getBackground(uv + offset * 1.2).r;
+          float g = getBackground(uv + offset).g;
+          float b = getBackground(uv + offset * 0.8).b;
+          
+          gl_FragColor = vec4(r, g, b, 1.0);
+        }
+      `
+    });
+
+    const screenQuad = new THREE.Mesh(geometry, material);
+    scene.add(screenQuad);
+
+    // Animation loop
+    function animate() {
+      requestAnimationFrame(animate);
+      
+      const time = performance.now() * 0.001;
+      
+      // Smooth mouse following
+      mouse.lerp(mouseTarget, 0.05);
+      
+      // Update uniforms
+      material.uniforms.uTime.value = time;
+      material.uniforms.uMouse.value.copy(mouse);
+      
+      renderer.render(scene, camera);
+    }
+
+    animate();
+
+    // Handle window resize
+    window.addEventListener('resize', () => {
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      material.uniforms.uResolution.value.set(window.innerWidth, window.innerHeight);
+    });
+
+  </script>
+</body>
+
+</html>

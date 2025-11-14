@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <title>Matcap Noise – Vicus</title>
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: #000;
+      overflow: hidden;
+    }
+  </style>
+</head>
+
+<body>
+  <script type="module">
+    import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.166.0/build/three.module.js";
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(innerWidth, innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+
+    // Load textures
+    const textureLoader = new THREE.TextureLoader();
+    const matcap = textureLoader.load('./metal_matcap.jpg');
+    const dispMap = textureLoader.load('./vicus.png');
+
+    dispMap.wrapS = dispMap.wrapT = THREE.ClampToEdgeWrapping;
+
+    // Create fullscreen quad
+    const geometry = new THREE.PlaneGeometry(2, 2);
+
+    // Matcap material with smooth noise
+    const material = new THREE.ShaderMaterial({
+      uniforms: {
+        uMatcap: { value: matcap },
+        uDisplacementMap: { value: dispMap },
+        uTime: { value: 0 },
+        uRotation: { value: 0 },
+        uDispStrength: { value: 0.4 },
+        uZoomLevel: { value: 1.5 },
+        uResolution: { value: new THREE.Vector2(1, 1) }
+      },
+      vertexShader: `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        precision mediump float;
+
+        uniform sampler2D uMatcap;
+        uniform sampler2D uDisplacementMap;
+        uniform vec2 uResolution;
+        uniform float uRotation;
+        uniform float uTime;
+        uniform float uDispStrength;
+        uniform float uZoomLevel;
+
+        varying vec2 vUv;
+
+        // Smooth noise functions
+        float hash(vec2 p) {
+          return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+        }
+        
+        float noise(vec2 p) {
+          vec2 i = floor(p);
+          vec2 f = fract(p);
+          vec2 u = f * f * (3.0 - 2.0 * f);
+          
+          return mix(
+            mix(hash(i + vec2(0.0, 0.0)), hash(i + vec2(1.0, 0.0)), u.x),
+            mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x),
+            u.y
+          );
+        }
+        
+        // Fractal noise
+        float fbm(vec2 p) {
+          float value = 0.0;
+          float amplitude = 0.5;
+          float frequency = 1.0;
+          
+          for (int i = 0; i < 4; i++) {
+            value += amplitude * noise(p * frequency);
+            amplitude *= 0.5;
+            frequency *= 2.0;
+          }
+          
+          return value;
+        }
+
+        void main() {
+          // Keep shader space square
+          float aspect = uResolution.x / uResolution.y;
+          vec2 texUv = vUv;
+
+          if (aspect > 1.0) {
+            // wide screen
+            texUv.x = (texUv.x - 0.5) * aspect + 0.5;
+          } else {
+            // tall screen
+            texUv.y = (texUv.y - 0.5) / aspect + 0.5;
+          }
+
+          texUv = (texUv - 0.5) * uZoomLevel + 0.5;
+
+          // Generate smooth noise normal instead of using normal texture
+          vec2 noisePos = texUv * 3.0 + uTime * 0.2;
+          float n1 = fbm(noisePos);
+          float n2 = fbm(noisePos + vec2(100.0, 0.0));
+          float n3 = fbm(noisePos + vec2(0.0, 100.0));
+          
+          // Create normal from noise derivatives
+          vec3 tangentNormal = normalize(vec3(n1 - n2, n1 - n3, 1.0) * 2.0 - 1.0);
+
+          // Add more dynamic noise like in logo.html
+          float noise1 = sin(texUv.x * 4.0 + uTime * 0.3);
+          float noise2 = cos(texUv.y * 3.0 + uTime * 0.25);
+          float noise3 = sin((texUv.x + texUv.y) * 2.0 + uTime * 0.1);
+          tangentNormal = normalize(tangentNormal + vec3(noise1, noise2, noise3) * 0.8);
+
+          vec3 viewNormal = normalize(vec3(tangentNormal.xy, tangentNormal.z));
+
+          // Apply rotation
+          vec2 mc = viewNormal.xy;
+          float s = sin(uRotation);
+          float c = cos(uRotation);
+          mc = mat2(c, -s, s, c) * mc;
+
+          // Apply displacement distortion
+          float disp = texture2D(uDisplacementMap, texUv).r;
+          // mc += vec2(cos(disp * 6.28318), sin(disp * 6.28318)) * uDispStrength;
+
+          // Sample matcap
+          mc = mc * 0.5 + 0.5;
+          vec3 matcapColor = texture2D(uMatcap, mc).rgb;
+
+          gl_FragColor = vec4(matcapColor, 1.0);
+        }
+      `
+    });
+
+    const mesh = new THREE.Mesh(geometry, material);
+    scene.add(mesh);
+
+    function animate() {
+      requestAnimationFrame(animate);
+      
+      const time = performance.now() * 0.001;
+      
+      // Update uniforms
+      material.uniforms.uTime.value = time;
+      material.uniforms.uResolution.value.set(innerWidth, innerHeight);
+      
+      renderer.render(scene, camera);
+    }
+
+    animate();
+
+    // Handle window resize
+    window.addEventListener('resize', () => {
+      renderer.setSize(innerWidth, innerHeight);
+      material.uniforms.uResolution.value.set(innerWidth, innerHeight);
+    });
+  </script>
+</body>
+
+</html>

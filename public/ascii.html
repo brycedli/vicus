@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <title>ASCII Logo – Vicus</title>
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: #000;
+      overflow: hidden;
+      font-family: 'Courier New', monospace;
+    }
+
+    #ascii {
+      color: #FFFFFF;
+      font-size: 16px;
+      line-height: 12px;
+      white-space: nowrap;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    #three-canvas {
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="ascii"></div>
+
+  <script type="module">
+    import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.166.0/build/three.module.js";
+
+    const density = '        .:░▒▓█';
+    const asciiDiv = document.getElementById('ascii');
+
+    // Three.js setup
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(256, 192); // 4x bigger resolution
+    renderer.domElement.id = 'three-canvas';
+    // document.body.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+
+    // Load textures with error handling
+    const textureLoader = new THREE.TextureLoader();
+    const matcap = textureLoader.load('./matcap2.jpeg', 
+      () => console.log('Matcap loaded'),
+      undefined,
+      (err) => console.error('Matcap failed:', err)
+    );
+    const normalMap = textureLoader.load('./normal.png',
+      () => console.log('Normal map loaded'),
+      undefined, 
+      (err) => console.error('Normal map failed:', err)
+    );
+    const dispMap = textureLoader.load('./vicus.png',
+      () => console.log('Displacement map loaded'),
+      undefined,
+      (err) => console.error('Displacement map failed:', err)
+    );
+
+    normalMap.wrapS = normalMap.wrapT = THREE.ClampToEdgeWrapping;
+    dispMap.wrapS = dispMap.wrapT = THREE.ClampToEdgeWrapping;
+
+    // Create logo geometry
+    const geometry = new THREE.PlaneGeometry(2, 2);
+
+    // Logo material with noise distortion
+    const material = new THREE.ShaderMaterial({
+      uniforms: {
+        uMatcap: { value: matcap },
+        uNormalMap: { value: normalMap },
+        uDisplacementMap: { value: dispMap },
+        uTime: { value: 0 },
+        uZoomLevel: { value: 1.5 },
+        uDispStrength: { value: 0.4 },
+        uNoiseStrength: { value: 0.05 },
+        uResolution: { value: new THREE.Vector2(1, 1) }
+      },
+      vertexShader: `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        precision mediump float;
+
+        uniform sampler2D uMatcap;
+        uniform sampler2D uNormalMap;
+        uniform sampler2D uDisplacementMap;
+        uniform float uTime;
+        uniform float uZoomLevel;
+        uniform float uDispStrength;
+        uniform float uNoiseStrength;
+        uniform vec2 uResolution;
+
+        varying vec2 vUv;
+
+        // Smooth noise functions
+        float hash(vec2 p) {
+          return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+        }
+        
+        float noise(vec2 p) {
+          vec2 i = floor(p);
+          vec2 f = fract(p);
+          vec2 u = f * f * (3.0 - 2.0 * f); // Smooth interpolation
+          
+          return mix(
+            mix(hash(i + vec2(0.0, 0.0)), hash(i + vec2(1.0, 0.0)), u.x),
+            mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x),
+            u.y
+          );
+        }
+        
+        // Fractal noise (multiple octaves for more organic look)
+        float fbm(vec2 p) {
+          float value = 0.0;
+          float amplitude = 0.5;
+          float frequency = 1.0;
+          
+          for (int i = 0; i < 4; i++) {
+            value += amplitude * noise(p * frequency);
+            amplitude *= 0.5;
+            frequency *= 2.0;
+          }
+          
+          return value;
+        }
+
+        void main() {
+          vec2 uv = vUv;
+
+          // Sample displacement map for logo shape
+          vec4 disp = texture2D(uDisplacementMap, uv);
+          float logoMask = disp.r; // Use red channel
+          
+          if (logoMask > 0.1) {
+            // Inside logo - vary luminosity with smooth noise
+            float noiseValue = fbm(uv * 4.0 + uTime * 0.3);
+            
+            // Map noise to luminosity range (0.6 to 1.0 for better legibility)
+            float luminosity = 0.6 + 0.4 * noiseValue;
+            
+            gl_FragColor = vec4(vec3(luminosity), 1.0);
+          } else {
+            // Outside logo - black
+            gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+          }
+        }
+      `
+    });
+
+    const logoMesh = new THREE.Mesh(geometry, material);
+    scene.add(logoMesh);
+
+    // Canvas for reading pixels
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 64;
+    canvas.height = 48;
+
+    function animate() {
+      const time = performance.now() * 0.001;
+      
+      // Update uniforms
+      material.uniforms.uTime.value = time;
+      material.uniforms.uResolution.value.set(256, 192);
+      
+      // Render Three.js scene
+      renderer.render(scene, camera);
+      
+      // Read pixels from Three.js renderer (higher res)
+      const pixels = new Uint8Array(256 * 192 * 4);
+      const gl = renderer.getContext();
+      gl.readPixels(0, 0, 256, 192, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+      
+      // Convert to ASCII
+      let asciiImage = "";
+      
+      for (let j = 0; j < 48; j++) {
+        for (let i = 0; i < 64; i++) {
+          // Sample from higher res buffer (4x4 blocks)
+          const srcX = Math.floor(i * 4);
+          const srcY = Math.floor(j * 4);
+          const flippedSrcY = 191 - srcY; // Flip Y for WebGL
+          const pixelIndex = (srcX + flippedSrcY * 256) * 4;
+          const r = pixels[pixelIndex + 0];
+          const g = pixels[pixelIndex + 1];
+          const b = pixels[pixelIndex + 2];
+          const avg = (r + g + b) / 3;
+          
+          const len = density.length;
+          const charIndex = Math.floor((avg / 255) * (len - 1));
+          const c = density.charAt(charIndex);
+          
+          if (c === " ") {
+            asciiImage += "&nbsp;";
+          } else {
+            asciiImage += c;
+          }
+        }
+        asciiImage += '<br/>';
+      }
+      
+      asciiDiv.innerHTML = asciiImage;
+      
+      // Debug: log first few pixels occasionally
+      if (Math.random() < 0.01) {
+        console.log('Sample pixels:', pixels[0], pixels[1], pixels[2], pixels[3]);
+      }
+      
+      requestAnimationFrame(animate);
+    }
+
+    // Start animation immediately and let textures load async
+    animate();
+    
+    // Debug: show loading status
+    console.log('Starting ASCII animation...');
+  </script>
+</body>
+
+</html>
