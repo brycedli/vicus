@@ -1,0 +1,55 @@
+html,
+body,
+#__next {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: #000;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.vicus-tagline-inline,
+.vicus-tagline-corner {
+  font-family: "DM Mono", monospace;
+  text-transform: uppercase;
+  line-height: 1.35;
+  font-size: 18px;
+  font-weight: 500;
+  color: #fff;
+}
+
+.vicus-tagline-inline {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.vicus-tagline-corner {
+  display: none !important;
+}
+
+.vicus-tagline-bar {
+  width: 35.47px;
+  height: 2.04px;
+  background: #c73a44;
+}
+
+@media (min-width: 768px) {
+  .vicus-tagline-inline {
+    display: none !important;
+  }
+
+  .vicus-tagline-corner {
+    display: flex !important;
+  }
+}
