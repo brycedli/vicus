@@ -6,6 +6,10 @@ const FlickerText = dynamic(() => import("../components/FlickerText"), {
   ssr: false
 });
 
+const CylinderText = dynamic(() => import("../components/CylinderText"), {
+  ssr: false
+});
+
 export default function Home() {
   return (
     <main
@@ -116,6 +120,17 @@ export default function Home() {
         <div>VICUS</div>
         <div className="vicus-tagline-bar" />
         <div>latin for village</div>
+      </div>
+      <div
+        style={{
+          position: "absolute",
+          right: 44,
+          bottom: 0,
+          width: 300,
+          height: 300,
+        }}
+      >
+        <CylinderText />
       </div>
       {/* ASCII stays full opacity */}
     </main>
