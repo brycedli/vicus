@@ -31,10 +31,7 @@ export default function Home() {
         <img
           src="/vicus_logo.svg"
           alt="Vicus logo"
-          style={{
-            height: 52,
-            height: "auto"
-          }}
+          className="vicus-logo"
         />
         <div className="main-text-group">
           <FlickerText
