@@ -32,8 +32,9 @@ export default function CylinderText() {
     const canvas = canvasRef.current;
     if (!container || !canvas) return;
 
-    const RENDER_WIDTH = 348;
-    const RENDER_HEIGHT = 272;
+    // Use container's current size so the canvas matches its box on mount
+    const RENDER_WIDTH = container.clientWidth || 348;
+    const RENDER_HEIGHT = container.clientHeight || 272;
 
     // --- Renderer ---
     const renderer = new THREE.WebGLRenderer({
@@ -55,13 +56,22 @@ export default function CylinderText() {
     );
     camera.position.set(0, 0, 16);
     camera.lookAt(0, 0, 0);
+    camera.aspect = RENDER_WIDTH / RENDER_HEIGHT;
+    camera.updateProjectionMatrix();
 
     // two-level group: tilt (static) + root (spins)
     const tiltGroup = new THREE.Group();
     scene.add(tiltGroup);
 
     const root = new THREE.Group();
-    root.scale.setScalar(GLOBAL_SCALE);
+    // Responsive scale so the cylinder fits within the canvas
+    const fitScale = () => {
+      const minDim = Math.max(1, Math.min(renderer.domElement.width, renderer.domElement.height));
+      // Slightly more conservative reference so text doesn't touch canvas edge
+      const scaleFactor = Math.min(1, minDim / 280);
+      root.scale.setScalar(GLOBAL_SCALE * scaleFactor);
+    };
+    fitScale();
     tiltGroup.add(root);
 
     // static tilt
@@ -187,9 +197,13 @@ export default function CylinderText() {
       renderer.setSize(w, h);
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
+      fitScale();
     };
 
     window.addEventListener("resize", handleResize);
+
+    // Ensure size/aspect are correct on first paint
+    handleResize();
 
     return () => {
       window.removeEventListener("resize", handleResize);

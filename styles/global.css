@@ -3,8 +3,7 @@ body,
 #__next {
   margin: 0;
   padding: 0;
-  height: 100%;
-  overflow: hidden;
+  min-height: 100%;
 }
 
 body {
@@ -16,6 +15,15 @@ body {
   margin: 0;
   padding: 0;
   border: 0;
+}
+
+@media (max-width: 768px) {
+  html,
+  body,
+  #__next {
+    height: auto;
+    overflow-y: auto;
+  }
 }
 
 .vicus-tagline-inline,
@@ -34,6 +42,15 @@ body {
   gap: 11px;
 }
 
+.vicus-tagline-secondary {
+  font-family: "DM Mono", monospace;
+  text-transform: uppercase;
+  line-height: 1.35;
+  font-size: 14px;
+  font-weight: 500;
+  color: #fff;
+}
+
 .vicus-tagline-corner {
   display: none !important;
 }
@@ -42,6 +59,128 @@ body {
   width: 35.47px;
   height: 2.04px;
   background: #c73a44;
+}
+
+.main-content {
+  position: absolute;
+  top: 44px;
+  left: 44px;
+  right: 44px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 44px;
+  max-width: 1000px;
+  font-family: "DM Mono", monospace;
+  font-weight: 300;
+  font-size: 20px;
+  line-height: 1.5;
+  z-index: 10;
+}
+
+.main-text-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.bottom-left-text {
+  position: absolute;
+  left: 44px;
+  bottom: 44px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  font-family: "DM Mono", monospace;
+  font-size: 14px;
+  font-weight: 500;
+  text-transform: uppercase;
+  line-height: 1.35;
+  color: white;
+  align-self: auto !important;
+}
+
+.bottom-right-cylinder {
+  position: absolute;
+  right: 44px;
+  bottom: 0;
+  width: 300px;
+  height: 300px;
+}
+
+.footer-section {
+  position: static;
+  position: absolute !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  display: block !important;
+}
+
+.driven-by-excellence {
+  transform: translateX(40%);
+}
+
+@media (max-width: 768px) {
+  main {
+    overflow: visible !important;
+  }
+
+  .main-content {
+    font-size: 16px;
+    top: 24px;
+    left: 0;
+    right: 0;
+    gap: 36px;
+    position: relative;
+    margin-bottom: 60px;
+    margin-left: 24px;
+    margin-right: 24px;
+    max-width: calc(100% - 48px);
+    width: 100%;
+  }
+
+  .footer-section {
+    position: relative !important;
+    width: 100%;
+    display: flex !important;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-top: auto;
+    padding: 0 24px 24px;
+    overflow: visible;
+    pointer-events: none; /* let clicks pass through container */
+  }
+
+  .bottom-left-text {
+    position: relative;
+    left: auto;
+    bottom: auto;
+    margin: 0;
+    pointer-events: auto;
+    z-index: 2;
+    flex-shrink: 1;
+    align-self: center;
+    font-size: 12px;
+  }
+
+  .driven-by-excellence {
+    transform: none;
+  }
+
+  .bottom-right-cylinder {
+    position: relative;
+    right: auto;
+    bottom: auto;
+    margin: 0 -10px -10px 0;
+    width: 150px;
+    height: 150px;
+    pointer-events: auto;
+    flex-shrink: 0;
+    z-index: 1;
+  }
 }
 
 @media (min-width: 768px) {

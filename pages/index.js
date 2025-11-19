@@ -27,24 +27,7 @@ export default function Home() {
         overflow: "hidden"
       }}
     >
-      <div
-        style={{
-          position: "absolute",
-          top: 44,
-          left: 44,
-          right: 44,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "flex-start",
-          gap: 44,
-          maxWidth: 1000,
-          fontFamily: "DM Mono, monospace",
-          fontWeight: 300,
-          fontSize: 20,
-          lineHeight: 1.5,
-          zIndex: 10
-        }}
-      >
+      <div className="main-content">
         <img
           src="/vicus_logo.svg"
           alt="Vicus logo"
@@ -53,19 +36,7 @@ export default function Home() {
             height: "auto"
           }}
         />
-        <div className="vicus-tagline-inline">
-          <div>VICUS</div>
-          <div className="vicus-tagline-bar" />
-          <div>latin for village</div>
-        </div>
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "flex-start",
-            gap: 24
-          }}
-        >
+        <div className="main-text-group">
           <FlickerText
             text=
               "It takes a village to build something enduring. Vicus has built that village. We want to be the first call when things go wrong, and the last ones to leave your corner when things get hard."
@@ -80,29 +51,7 @@ export default function Home() {
         <MatcapBackground />
       </div>
 
-      <div
-        style={{
-          position: "absolute",
-          left: 44,
-          bottom: 44,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "flex-start",
-          gap: 4,
-          fontFamily: "DM Mono, monospace",
-          fontSize: 14,
-          fontWeight: 500,
-          textTransform: "uppercase",
-          lineHeight: 1.35,
-          color: "white"
-        }}
-      >
-        <div >BUILT ON TRUST</div>
-        <div style={{transform: 'translateX(40%)' }}>DRIVEN BY EXCELLENCE</div>
-      </div>
-
-      <div
-        className="vicus-tagline-corner"
+      <div className="vicus-tagline-corner"
         style={{
           position: "absolute",
           right: 44,
@@ -117,20 +66,19 @@ export default function Home() {
           color: "white"
         }}
       >
-        <div>VICUS</div>
+        <div className="vicus-tagline-secondary">VICUS</div>
         <div className="vicus-tagline-bar" />
-        <div>latin for village</div>
+        <div className="vicus-tagline-secondary">latin for village</div>
       </div>
-      <div
-        style={{
-          position: "absolute",
-          right: 44,
-          bottom: 0,
-          width: 300,
-          height: 300,
-        }}
-      >
-        <CylinderText />
+
+      <div className="footer-section">
+        <div className="bottom-left-text">
+          <div>BUILT ON TRUST</div>
+          <div className="driven-by-excellence">DRIVEN BY EXCELLENCE</div>
+        </div>
+        <div className="bottom-right-cylinder">
+          <CylinderText />
+        </div>
       </div>
       {/* ASCII stays full opacity */}
     </main>

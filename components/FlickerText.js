@@ -18,8 +18,8 @@ export default function FlickerText({ text, duration = 900, hoverDuration = 600 
     const chars = text.split("");
     // Precompute a random settle time for each character so they
     // all start together but resolve at different speeds.
-    const minFactor = 2.0;
-    const maxFactor = 30.4;
+    const minFactor = 1.0;
+    const maxFactor = 12.0;
     const biasPower = 0.1; // higher = more weight toward the tail
     const settleTimes = chars.map(() => {
       const r = Math.random();
