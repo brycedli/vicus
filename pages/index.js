@@ -36,7 +36,7 @@ export default function Home() {
         <div className="main-text-group">
           <FlickerText
             text=
-              "It takes a village to build something enduring. Vicus has built that village. We want to be the first call when things go wrong, and the last ones to leave your corner when things get hard."
+              "It takes a village to build something enduring. Vicus has built that village. We want to be the first call when things go wrong, and the last ones to leave when things get hard."
           />
           <FlickerText
             text="We combine high-conviction, hands-on investing powered by the Vicus 55 - our hand-picked investor base of global c-suite execs, unicorn founders, renowned investors, exciting celebrities, and other value-add names to accelerate company-building from day zero."
